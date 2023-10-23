@@ -69,13 +69,13 @@ export function PopulationChart() {
     try {
       setLoading(true);
       const results = await axios.post(
-        "http://localhost:4000/country/get-by-year",
+        "https://alert-cow-frock.cyclic.app/country/get-by-year",
         {
           continent: inputContinent,
         }
       );
       const worldResults = await axios.post(
-        "http://localhost:4000/country/get-total-by-year"
+        "https://alert-cow-frock.cyclic.app/country/get-total-by-year"
       );
       let worldData = worldResults.data.results;
       let data = results.data.results;
