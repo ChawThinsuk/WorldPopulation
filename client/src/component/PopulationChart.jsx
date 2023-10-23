@@ -266,8 +266,8 @@ export function PopulationChart() {
         </button>
         <div className="mt-[10px]">
           <div className="flex flex-row mr-[10px] text-[11px]">
-            {arrayYearBar.map((item) => {
-              return <p className="mr-[20.5px]">{item}</p>;
+            {arrayYearBar.map((item,index) => {
+              return <p key={index} className="mr-[20.5px]">{item}</p>;
             })}
           </div>
           <div className=" h-1 w-[600px] bg-[#787878] duration-200 ml-[5px]">
