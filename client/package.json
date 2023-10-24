@@ -17,7 +17,7 @@
     "react": "^18.2.0",
     "react-chart-race": "^0.0.3",
     "react-dom": "^18.2.0",
-    "react-google-charts": "^4.0.1",
+    "react-google-charts": "^0.2.2",
     "react-transition-group": "^4.4.5",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.0/xlsx-0.20.0.tgz"
   },

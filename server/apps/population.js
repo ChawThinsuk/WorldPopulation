@@ -3,6 +3,7 @@ import { Router } from "express";
 import { db } from "../utils/db.js";
 import * as XLSX from "xlsx";
 import fs from "fs";
+import { log } from "console";
 
 const countryRouter = Router();
 
@@ -10,7 +11,25 @@ countryRouter.post("/", async (req, res) => {
   const data = fs.readFileSync("./population-and-demography.csv");
   const workbook = XLSX.read(data);
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  const raw_data = XLSX.utils.sheet_to_json(worksheet);
+  let raw_data = XLSX.utils.sheet_to_json(worksheet);
+
+  for (let i=0;i<raw_data.length;i++) {
+    if (Asia.includes(raw_data[i]["Country name"])) {
+    raw_data[i] = {...raw_data[i],Continent:"Asia"}
+    }
+    if (Africa.includes(raw_data[i]["Country name"])) {
+      raw_data[i] = {...raw_data[i],Continent:"Africa"}
+    }
+    if (Oceania.includes(raw_data[i]["Country name"])) {
+      raw_data[i] = {...raw_data[i],Continent:"Oceania"}
+    }
+    if (Europe.includes(raw_data[i]["Country name"])) {
+      raw_data[i] = {...raw_data[i],Continent:"Europe"}
+    }
+    if (America.includes(raw_data[i]["Country name"])) {
+      raw_data[i] = {...raw_data[i],Continent:"America"}
+    }
+  }
 
   const collection = db.collection("Countries");
   const population = await collection.insertMany(raw_data);
@@ -22,44 +41,30 @@ countryRouter.post("/", async (req, res) => {
 
 countryRouter.post("/get-by-year", async (req, res) => {
   const collection = db.collection("Countries");
-  let results = []
-  let year = 1950
-  for (year;year<=2021;year++) {
-    const worldPopulation = await collection
-    .find(
-      { Year: year },
-      { projection: { "Country name": 1, _id: 0, Year: 1, Population: 1 } }
-    )
-    .toArray();
-    let worldCountry = worldPopulation.filter((item) => {
-      if (country.includes(item["Country name"])) {
-        return item
-      }
-    })   
-
-  if (req.body.continent && req.body.continent?.length > 0) {
-    let filterCountryByContinent = [];
-    if (req.body.continent.includes("Asia")) {
-      filterCountryByContinent = [...filterCountryByContinent,...Asia]
-    }
-    if (req.body.continent.includes("Africa")) {
-      filterCountryByContinent = [...filterCountryByContinent,...Africa]
-    }
-    if (req.body.continent.includes("Europe")) {
-      filterCountryByContinent = [...filterCountryByContinent,...Europe]
-    }
-    if (req.body.continent.includes("America")) {
-      filterCountryByContinent = [...filterCountryByContinent,...America]
-    }
-    if (req.body.continent.includes("Oceania")) {
-      filterCountryByContinent = [...filterCountryByContinent,...Oceania]
-    }
-    worldCountry =  worldCountry.filter((item) => filterCountryByContinent.includes(item["Country name"]))
+  let results = [];
+  let worldPopulation = []
+  let year = 1950;
+    for (year;year<=2021;year++) {
+    if (req.body.continent && req.body.continent?.length > 0) {
+      worldPopulation = await collection
+      .find(
+        { Year: year , Continent:{ $in: req.body.continent }},
+        { projection: { "Country name": 1, _id: 0, Year: 1, Population: 1 } }
+      )
+      .toArray();
+    } else {
+        worldPopulation = await collection
+        .find(
+          {Year: year, Continent: { $exists : true }},
+          { projection: { "Country name": 1, _id: 0, Year: 1, Population: 1 } }
+        )
+        .toArray();
+    
   }
-  worldCountry.sort((a, b) => b.Population - a.Population);
-  const top12Countries =  worldCountry.slice(0, 12);
-  results = [...results,...top12Countries]
-  }
+  worldPopulation.sort((a, b) => b.Population - a.Population);
+    const top12Countries = worldPopulation.slice(0, 12);
+    results = [...results,...top12Countries]
+}
   return res.json({
     results,
   });
@@ -67,20 +72,17 @@ countryRouter.post("/get-by-year", async (req, res) => {
 
 countryRouter.post("/get-total-by-year", async (req, res) => {
   const collection = db.collection("Countries");
-  let results = []
-  let year = 1950
-  for (year;year<=2021;year++) {
+  let results = [];
     const worldPopulation = await collection
-    .find(
-      { "Country name": "World"},
-      { projection: { _id:0,Year:-1,Population:1} }
-    )
-    .toArray();
-    results = [...worldPopulation]
-  }
-  // console.log(results);
+      .find(
+        { "Country name": "World" },
+        { projection: { _id: 0, Year: -1, Population: 1 } }
+      )
+      .toArray();
+    // results = [...worldPopulation];
+  console.log(worldPopulation);
   return res.json({
-    results,
+    worldPopulation,
   });
 });
 
@@ -596,32 +598,51 @@ const Oceania = [
   "Samoa",
 ];
 
+// countryRouter.post("/createCountry", async (req, res) => {
+//   const collection = db.collection("NameOfCountries");
+//   let array = country.map((item) => {
+//     return { country: `${item}`, continent: "" };
+//   });
+//   for (const entry of array) {
+//     entry.continent = findContinent(entry.country);
+//   }
+//   const population = await collection.insertMany(array);
+//   return res.json({
+//     message: population,
+//   });
+// });
+// function findContinent(country) {
+//   if (Africa.includes(country)) {
+//     return "Africa";
+//   } else if (Asia.includes(country)) {
+//     return "Asia";
+//   } else if (Europe.includes(country)) {
+//     return "Europe";
+//   } else if (America.includes(country)) {
+//     return "America";
+//   } else if (Oceania.includes(country)) {
+//     return "Oceania";
+//   } else {
+//     return "Unknown";
+//   }
+// }
 
-countryRouter.post("/createCountry", async (req, res) => {
-  const collection = db.collection("NameOfCountries");
-  let array = country.map((item) => {
-    return { country: `${item}`, continent: "" };
-  });
-  for (const entry of array) {
-    entry.continent = findContinent(entry.country);
-  }
-  const population = await collection.insertMany(array);
-  return res.json({
-    message: population,
-  });
-});
-function findContinent(country) {
-  if (Africa.includes(country)) {
-    return "Africa";
-  } else if (Asia.includes(country)) {
-    return "Asia";
-  } else if (Europe.includes(country)) {
-    return "Europe";
-  } else if (America.includes(country)) {
-    return "America";
-  } else if (Oceania.includes(country)) {
-    return "Oceania";
-  } else {
-    return "Unknown";
-  }
-}
+// let filterCountryByContinent = [];
+// if (req.body.continent.includes("Asia")) {
+//   filterCountryByContinent = [...filterCountryByContinent, ...Asia];
+// }
+// if (req.body.continent.includes("Africa")) {
+//   filterCountryByContinent = [...filterCountryByContinent, ...Africa];
+// }
+// if (req.body.continent.includes("Europe")) {
+//   filterCountryByContinent = [...filterCountryByContinent, ...Europe];
+// }
+// if (req.body.continent.includes("America")) {
+//   filterCountryByContinent = [...filterCountryByContinent, ...America];
+// }
+// if (req.body.continent.includes("Oceania")) {
+//   filterCountryByContinent = [...filterCountryByContinent, ...Oceania];
+// }
+// worldCountry = worldCountry.filter((item) =>
+//   filterCountryByContinent.includes(item["Country name"])
+// );
